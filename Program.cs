@@ -1,5 +1,4 @@
-﻿using System.Text;
-using Microsoft.AspNetCore.ResponseCompression;
+﻿using System.IO.Compression;
 
 namespace Gzip
 {
@@ -7,10 +6,30 @@ namespace Gzip
     {
         static void Main(string[] args)
         {
-            var provider = new GzipCompressionProvider(new GzipCompressionProviderOptions());
-            var stream = provider.CreateStream(System.Console.OpenStandardOutput());
-            stream.Write(Encoding.UTF8.GetBytes("hello world."));
-            stream.Close();
+            System.IO.Stream ins;
+            System.IO.Stream outs;
+            if (args.Length != 0 && args[0] == "-d")
+            { // decompress
+                ins = new GZipStream(System.Console.OpenStandardInput(), CompressionMode.Decompress);
+                outs = System.Console.OpenStandardOutput();
+            }
+            else
+            { // compress
+                ins = System.Console.OpenStandardInput();
+                outs = new GZipStream(System.Console.OpenStandardOutput(), CompressionLevel.Optimal);
+            }
+            System.Span<byte> bytes = stackalloc byte[4096];
+            while (true)
+            {
+                var nrRead = ins.Read(bytes);
+                if (nrRead == 0)
+                {
+                    ins.Close();
+                    outs.Close();
+                    break;
+                }
+                outs.Write(bytes.Slice(0, nrRead));
+            }
         }
     }
 }
